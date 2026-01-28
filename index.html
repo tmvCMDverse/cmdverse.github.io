@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Submitter + QR Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #e2e8f0;
+            background-color: #0f172a;
+            padding: 20px;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        #video-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -1;
+            opacity: 0.4;
+        }
+
+        .logo-container {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+        }
+
+        .logo {
+            max-width: 700px;
+            width: 100%;
+            height: auto;
+            filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.1));
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(15, 23, 42, 0.85);
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            z-index: 1;
+        }
+
+        .token-status {
+            background: rgba(21, 128, 61, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            text-align: center;
+        }
+
+        .token-status h3 {
+            margin-bottom: 5px;
+            color: #86efac;
+        }
+
+        .token-status p {
+            font-size: 14px;
+            color: #bbf7d0;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #cbd5e1;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            font-size: 14px;
+            background-color: #1e293b;
+            color: #e2e8f0;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        button:hover { background: #2563eb; transform: translateY(-1px); }
+        button:disabled { background: #1e40af; cursor: not-allowed; }
+
+        .message {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .message.success { background: rgba(21, 128, 61, 0.2); color: #86efac; border: 1px solid rgba(34, 197, 94, 0.3); }
+        .message.error { background: rgba(185, 28, 28, 0.2); color: #fca5a5; border: 1px solid rgba(248, 113, 113, 0.3); }
+        
+        /* Hidden element for QR generation */
+        #qr-buffer { display: none; }
+    </style>
+</head>
+<body>
+    <video id="video-background" autoplay muted loop>
+        <source src="https://raw.githubusercontent.com/ralphsmits/testing3oct/refs/heads/main/backdrop.mp4" type="video/mp4">
+    </video>
+
+    <div class="logo-container">
+        <img src="https://raw.githubusercontent.com/ralphsmits/testing3oct/refs/heads/main/cmdverselogo2.png" alt="CMDverse Logo" class="logo">
+    </div>
+
+    <div class="container">
+        <div class="token-status">
+            <h3>System Ready</h3>
+            <p>Project & QR Code generation active</p>
+        </div>
+
+        <form id="projectForm">
+            <div class="form-group">
+                <label for="projectName">Project Name *</label>
+                <input type="text" id="projectName" name="projectName" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="creators">Creators (comma separated) *</label>
+                <input type="text" id="creators" name="creators" placeholder="Ava Janssen, Rik de Boer" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="description">Description *</label>
+                <textarea id="description" name="description" rows="4" required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="projectUrl">Project URL (for QR Code) *</label>
+                <input type="url" id="projectUrl" name="projectUrl" placeholder="https://example.com" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="tags">Tags (comma separated) *</label>
+                <input type="text" id="tags" name="tags" placeholder="Tech, interaction, sensors" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="category">Category *</label>
+                <select id="category" name="category" required>
+                    <option value="">Select a category</option>
+                    <option value="Human">Human</option>
+                    <option value="Void">Void</option>
+                    <option value="Tech">Tech</option>
+                    <option value="Story">Story</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="year">Year *</label>
+                <input type="date" id="year" name="year" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="imageFile">Project Thumbnail *</label>
+                <input type="file" id="imageFile" name="imageFile" accept="image/png, image/jpeg, image/jpg" required>
+                <small style="display:block; color:#94a3b8; font-size:12px; margin-top:5px;">PNG or JPG, max 2MB</small>
+            </div>
+            
+            <button type="submit" id="submitBtn">Create Project</button>
+        </form>
+        
+        <div id="message" class="message"></div>
+        <div id="qr-buffer"></div>
+    </div>
+
+    <script>
+        class ProjectSubmitter {
+            constructor() {
+                this.form = document.getElementById('projectForm');
+                this.messageEl = document.getElementById('message');
+                this.submitBtn = document.getElementById('submitBtn');
+                this.qrBuffer = document.getElementById('qr-buffer');
+                
+                // Fine-grained personal access token
+                this.githubToken = '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';
+                
+                this.form.addEventListener('submit', (e) => this.handleSubmit(e));
+            }
+
+            async handleSubmit(e) {
+                e.preventDefault();
+                this.setMessage('', '');
+                this.setLoading(true);
+
+                try {
+                    const formData = new FormData(this.form);
+                    const projectData = this.processFormData(formData);
+
+                    // 1. Test the token
+                    await this.testGitHubToken(this.githubToken);
+                    
+                    // 2. Create the project (includes QR generation)
+                    await this.createProjectOnGitHub({ ...projectData, githubToken: this.githubToken });
+                    
+                    this.setMessage('Project and QR Code created successfully!', 'success');
+                    this.form.reset();
+                } catch (error) {
+                    this.setMessage(`Error: ${error.message}`, 'error');
+                    console.error('Submission error:', error);
+                } finally {
+                    this.setLoading(false);
+                }
+            }
+
+            processFormData(formData) {
+                return {
+                    projectName: formData.get('projectName'),
+                    creators: formData.get('creators').split(',').map(name => name.trim()),
+                    description: formData.get('description'),
+                    tags: formData.get('tags').split(',').map(tag => tag.trim()),
+                    category: formData.get('category'),
+                    year: formData.get('year'),
+                    projectUrl: formData.get('projectUrl'),
+                    imageFile: formData.get('imageFile')
+                };
+            }
+
+            async generateQRCodeBase64(url) {
+                return new Promise((resolve) => {
+                    this.qrBuffer.innerHTML = ""; // Clear previous
+                    const qrcode = new QRCode(this.qrBuffer, {
+                        text: url,
+                        width: 512,
+                        height: 512,
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+
+                    // Small delay to ensure canvas renders
+                    setTimeout(() => {
+                        const canvas = this.qrBuffer.querySelector('canvas');
+                        resolve(canvas.toDataURL("image/png"));
+                    }, 200);
+                });
+            }
+
+            async testGitHubToken(token) {
+                const response = await fetch('https://api.github.com/user', {
+                    headers: { 'Authorization': `token ${token}` }
+                });
+                if (!response.ok) throw new Error('GitHub Token Authentication Failed');
+                return true;
+            }
+
+            async createProjectOnGitHub(projectData) {
+                const { githubToken, imageFile, projectUrl, ...metadata } = projectData;
+                
+                // Process image and generate QR
+                const imageBase64 = await this.fileToBase64(imageFile);
+                const qrBase64 = await this.generateQRCodeBase64(projectUrl);
+                
+                const folderName = this.sanitizeFolderName(metadata.projectName);
+                
+                const metadataContent = {
+                    ...metadata,
+                    projectUrl: projectUrl,
+                    imageFile: "thumbnail.png",
+                    qrCodeFile: "qrcode.png"
+                };
+
+                // Upload Metadata
+                await this.createGitHubFile(githubToken, `${folderName}/metadata.json`, JSON.stringify(metadataContent, null, 2), false);
+                
+                // Upload Thumbnail
+                await this.createGitHubFile(githubToken, `${folderName}/thumbnail.png`, imageBase64, true);
+
+                // Upload QR Code
+                await this.createGitHubFile(githubToken, `${folderName}/qrcode.png`, qrBase64, true);
+            }
+
+            async createGitHubFile(token, path, content, isImage = false) {
+                const base64Content = isImage ? content.split(',')[1] : btoa(unescape(encodeURIComponent(content)));
+
+                const response = await fetch(
+                    `https://api.github.com/repos/cmdverse/cmdverse/contents/hold/${path}`, 
+                    {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `token ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            message: `Add project: ${path}`,
+                            content: base64Content,
+                            branch: 'main'
+                        })
+                    }
+                );
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.message || 'Failed to upload to GitHub');
+                }
+            }
+
+            fileToBase64(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = error => reject(error);
+                });
+            }
+
+            sanitizeFolderName(name) {
+                return name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+            }
+
+            setMessage(text, type) {
+                this.messageEl.textContent = text;
+                this.messageEl.className = `message ${type}`;
+                this.messageEl.style.display = text ? 'block' : 'none';
+            }
+
+            setLoading(loading) {
+                this.submitBtn.disabled = loading;
+                this.submitBtn.textContent = loading ? 'Processing Files...' : 'Create Project';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => new ProjectSubmitter());
+    </script>
+</body>
+</html>
