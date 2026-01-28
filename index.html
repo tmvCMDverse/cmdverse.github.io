@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project Submitter + QR Generator</title>
+    <title>CMDverse</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         * {
@@ -131,7 +131,6 @@
         .message.success { background: rgba(21, 128, 61, 0.2); color: #86efac; border: 1px solid rgba(34, 197, 94, 0.3); }
         .message.error { background: rgba(185, 28, 28, 0.2); color: #fca5a5; border: 1px solid rgba(248, 113, 113, 0.3); }
         
-        /* Hidden element for QR generation */
         #qr-buffer { display: none; }
     </style>
 </head>
@@ -146,8 +145,8 @@
 
     <div class="container">
         <div class="token-status">
-            <h3>System Ready</h3>
-            <p>Project & QR Code generation active</p>
+            <h3>Repository: tmvCMDverse</h3>
+            <p>Ready to upload project files and QR codes</p>
         </div>
 
         <form id="projectForm">
@@ -168,7 +167,7 @@
 
             <div class="form-group">
                 <label for="projectUrl">Project URL (for QR Code) *</label>
-                <input type="url" id="projectUrl" name="projectUrl" placeholder="https://example.com" required>
+                <input type="url" id="projectUrl" name="projectUrl" placeholder="https://tmvcmdverse.github.io/your-project" required>
             </div>
             
             <div class="form-group">
@@ -213,9 +212,14 @@
                 this.submitBtn = document.getElementById('submitBtn');
                 this.qrBuffer = document.getElementById('qr-buffer');
                 
-                // Fine-grained personal access token
-                this.githubToken = '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';
-                
+                // --- CONFIGURATION ---
+                // Replace with your new Fine-Grained Token
+                this.githubToken = 'YOUR_NEW_GITHUB_TOKEN_HERE'; 
+                this.repoOwner = 'tmvCMDverse';
+                this.repoName = 'cmdverse.github.io';
+                this.branch = 'main'; // Use 'main' or 'master' depending on your repo
+                // ---------------------
+
                 this.form.addEventListener('submit', (e) => this.handleSubmit(e));
             }
 
@@ -231,10 +235,10 @@
                     // 1. Test the token
                     await this.testGitHubToken(this.githubToken);
                     
-                    // 2. Create the project (includes QR generation)
+                    // 2. Create the project folder and files
                     await this.createProjectOnGitHub({ ...projectData, githubToken: this.githubToken });
                     
-                    this.setMessage('Project and QR Code created successfully!', 'success');
+                    this.setMessage('Project, Metadata, and QR Code uploaded successfully!', 'success');
                     this.form.reset();
                 } catch (error) {
                     this.setMessage(`Error: ${error.message}`, 'error');
@@ -259,7 +263,7 @@
 
             async generateQRCodeBase64(url) {
                 return new Promise((resolve) => {
-                    this.qrBuffer.innerHTML = ""; // Clear previous
+                    this.qrBuffer.innerHTML = ""; 
                     const qrcode = new QRCode(this.qrBuffer, {
                         text: url,
                         width: 512,
@@ -267,7 +271,6 @@
                         correctLevel: QRCode.CorrectLevel.H
                     });
 
-                    // Small delay to ensure canvas renders
                     setTimeout(() => {
                         const canvas = this.qrBuffer.querySelector('canvas');
                         resolve(canvas.toDataURL("image/png"));
@@ -279,14 +282,13 @@
                 const response = await fetch('https://api.github.com/user', {
                     headers: { 'Authorization': `token ${token}` }
                 });
-                if (!response.ok) throw new Error('GitHub Token Authentication Failed');
+                if (!response.ok) throw new Error('GitHub Token Authentication Failed. Please check your token.');
                 return true;
             }
 
             async createProjectOnGitHub(projectData) {
                 const { githubToken, imageFile, projectUrl, ...metadata } = projectData;
                 
-                // Process image and generate QR
                 const imageBase64 = await this.fileToBase64(imageFile);
                 const qrBase64 = await this.generateQRCodeBase64(projectUrl);
                 
@@ -299,38 +301,43 @@
                     qrCodeFile: "qrcode.png"
                 };
 
-                // Upload Metadata
-                await this.createGitHubFile(githubToken, `${folderName}/metadata.json`, JSON.stringify(metadataContent, null, 2), false);
-                
-                // Upload Thumbnail
-                await this.createGitHubFile(githubToken, `${folderName}/thumbnail.png`, imageBase64, true);
+                // Path construction: hold/[project-name]/filename
+                const basePath = `hold/${folderName}`;
 
-                // Upload QR Code
-                await this.createGitHubFile(githubToken, `${folderName}/qrcode.png`, qrBase64, true);
+                // Upload Metadata.json
+                await this.createGitHubFile(githubToken, `${basePath}/metadata.json`, JSON.stringify(metadataContent, null, 2), false);
+                
+                // Upload Thumbnail.png
+                await this.createGitHubFile(githubToken, `${basePath}/thumbnail.png`, imageBase64, true);
+
+                // Upload Qrcode.png
+                await this.createGitHubFile(githubToken, `${basePath}/qrcode.png`, qrBase64, true);
             }
 
             async createGitHubFile(token, path, content, isImage = false) {
+                // Remove data URL prefix for images
                 const base64Content = isImage ? content.split(',')[1] : btoa(unescape(encodeURIComponent(content)));
 
                 const response = await fetch(
-                    `https://api.github.com/repos/cmdverse/cmdverse/contents/hold/${path}`, 
+                    `https://api.github.com/repos/${this.repoOwner}/${this.repoName}/contents/${path}`, 
                     {
                         method: 'PUT',
                         headers: {
                             'Authorization': `token ${token}`,
-                            'Content-Type': 'application/json'
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/vnd.github.v3+json'
                         },
                         body: JSON.stringify({
-                            message: `Add project: ${path}`,
+                            message: `Add project file: ${path}`,
                             content: base64Content,
-                            branch: 'main'
+                            branch: this.branch
                         })
                     }
                 );
 
                 if (!response.ok) {
                     const data = await response.json();
-                    throw new Error(data.message || 'Failed to upload to GitHub');
+                    throw new Error(`GitHub Error: ${data.message || response.statusText}`);
                 }
             }
 
@@ -344,7 +351,10 @@
             }
 
             sanitizeFolderName(name) {
-                return name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+                return name.toLowerCase()
+                    .replace(/[^a-z0-9]/g, '-')
+                    .replace(/-+/g, '-')
+                    .replace(/^-|-$/g, '');
             }
 
             setMessage(text, type) {
@@ -355,7 +365,7 @@
 
             setLoading(loading) {
                 this.submitBtn.disabled = loading;
-                this.submitBtn.textContent = loading ? 'Processing Files...' : 'Create Project';
+                this.submitBtn.textContent = loading ? 'Uploading to GitHub...' : 'Create Project';
             }
         }
 
