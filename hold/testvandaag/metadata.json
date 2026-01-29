@@ -1,0 +1,18 @@
+{
+  "projectName": "TestVandaag",
+  "creators": [
+    "Luka de Poeka"
+  ],
+  "description": "Lalalala",
+  "tags": [
+    "Tech",
+    "media",
+    "story"
+  ],
+  "category": "Discursive",
+  "year": "9392-02-09",
+  "projectUrl": "https://www.lukavanopstal.com",
+  "imageFile": "thumbnail.png",
+  "videoFile": "video.mp4",
+  "qrCodeFile": "qrcode.png"
+}
