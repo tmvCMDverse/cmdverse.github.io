@@ -1,0 +1,23 @@
+{
+  "projectName": "AR you Ready?",
+  "creators": [
+    "Luuk Roovers",
+    "Corné Schipper",
+    "Brandon Evaristo",
+    "Victor Quaedvlieg",
+    "Marijn Ketelaar",
+    "Rochee Faverey"
+  ],
+  "description": "Een game met een immersive verhaal over het leven van een interviewer in het jaar 2050 waar Augmented Reality een hoofdrol speelt in de samenleving. De journalist ervaart problemen met het combineren van zijn sociale leven met zijn werk vanwege de constante ballast van zijn AR-bril.",
+  "tags": [
+    "Game",
+    "Tech",
+    "Storytelling"
+  ],
+  "category": "Createch",
+  "year": "2024-11-11",
+  "projectUrl": "https://rooversluuk.nl/ar-you-ready",
+  "imageFile": "thumbnail.png",
+  "videoFile": "video.mp4",
+  "qrCodeFile": "qrcode.png"
+}
